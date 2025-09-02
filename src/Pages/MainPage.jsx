@@ -1,67 +1,27 @@
-import React from 'react';
-import { Grid, List, Star, MoreHorizontal, Users } from 'lucide-react';
-import ProjectCard from '../Components/ProjectCard';
+import React, { useState } from "react";
+import { Grid, List, Star, MoreHorizontal, Users } from "lucide-react";
+import ProjectCard from "../Components/ProjectCard";
+import NewProjectModal from "../Modals/NewProjectModal";
+import { useDispatch, useSelector } from 'react-redux'; // ADD THIS IMPORT
+import { addTodoBox } from '../ReduxStore/Reducers'; // ADD THIS IMPORT
 
 const ProjectDashboard = () => {
-  const projects = [
-    {
-      id: 1,
-      title: "Video Campaign",
-      subtitle: "Application Concept",
-      subtitle2: "Website Concept",
-      teamMembers: 2,
-      status: "Active recently",
-      starred: true,
-      color: "bg-yellow-100"
-    },
-    {
-      id: 2,
-      title: "NPS",
-      subtitle: "Statistics and Overview",
-      email: "nps@gmail.com",
-      teamMembers: 2,
-      status: "1 day ago",
-      starred: true,
-      color: "bg-blue-100"
-    },
-    {
-      id: 3,
-      title: "Internal",
-      subtitle: "",
-      teamMembers: 3,
-      status: "1 day ago",
-      starred: true,
-      color: "bg-gray-100",
-      hasBoxes: true
-    },
-    {
-      id: 4,
-      title: "Growth Hacking",
-      subtitle: "Ideas, challenges and tests",
-      teamMembers: 2,
-      status: "2 days ago",
-      starred: false,
-      color: "bg-green-100"
-    },
-    {
-      id: 5,
-      title: "Product Marketing",
-      subtitle: "All things marketing",
-      teamMembers: 2,
-      status: "1 week ago",
-      starred: false,
-      color: "bg-purple-100"
-    },
-    {
-      id: 6,
-      title: "Mobile App Design",
-      subtitle: "Prototypes, mockups, client and collaboration",
-      teamMembers: 2,
-      status: "1 week ago",
-      starred: false,
-      color: "bg-orange-100"
-    }
-  ];
+
+    
+
+const dispatch = useDispatch();
+  const { todoBoxes, todos } = useSelector(state => state.todos);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const createNewTodoBox = () => {
+  setIsModalOpen(true);
+};
+
+
+const handleModalSubmit = (projectData) => {
+  console.log('Project data:', projectData); 
+  dispatch(addTodoBox(projectData)); 
+};
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -70,7 +30,7 @@ const ProjectDashboard = () => {
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-semibold text-gray-900">All Projects</h1>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium">
+          <button onClick={() => createNewTodoBox()} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium">
             Start a new project
           </button>
         </div>
@@ -106,7 +66,7 @@ const ProjectDashboard = () => {
             </select>
           </div>
         </div>
-        <ProjectCard projects={projects} />
+        <ProjectCard projects={todoBoxes} />
       </div>
 
       {/* Right Sidebar */}
@@ -167,26 +127,30 @@ const ProjectDashboard = () => {
         {/* Activity Feed */}
         <div>
           <h3 className="font-semibold text-gray-900 mb-4">Activity Feed</h3>
-          
+
           <div className="space-y-4">
             <div className="flex items-start space-x-3">
               <div className="w-8 h-8 bg-gray-200 rounded-full flex-shrink-0"></div>
               <div className="flex-1">
                 <p className="text-sm text-gray-900">
-                  <span className="font-medium">Completed task</span> Prepare moodboard for website branding
+                  <span className="font-medium">Completed task</span> Prepare
+                  moodboard for website branding
                 </p>
               </div>
             </div>
 
             <div className="bg-yellow-100 rounded-lg p-3 text-center">
-              <span className="text-sm font-medium text-yellow-800">Coffee Break</span>
+              <span className="text-sm font-medium text-yellow-800">
+                Coffee Break
+              </span>
             </div>
 
             <div className="flex items-start space-x-3">
               <div className="w-8 h-8 bg-gray-200 rounded-full flex-shrink-0"></div>
               <div className="flex-1">
                 <p className="text-sm text-gray-900">
-                  <span className="font-medium">Overload task</span> Search references for multi-colored background.
+                  <span className="font-medium">Overload task</span> Search
+                  references for multi-colored background.
                 </p>
               </div>
             </div>
@@ -197,6 +161,11 @@ const ProjectDashboard = () => {
           </div>
         </div>
       </div>
+      <NewProjectModal
+  isOpen={isModalOpen}
+  onClose={() => setIsModalOpen(false)}
+  onSubmit={handleModalSubmit}
+/>
     </div>
   );
 };
