@@ -7,6 +7,8 @@ const NewProjectModal = ({ isOpen, onClose, onSubmit }) => {
   const [isVisible, setIsVisible] = useState(false);
 
 
+
+
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);

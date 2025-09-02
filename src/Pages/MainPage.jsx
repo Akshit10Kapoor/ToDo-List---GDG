@@ -2,20 +2,42 @@ import React, { useState } from "react";
 import { Grid, List, Star, MoreHorizontal, Users } from "lucide-react";
 import ProjectCard from "../Components/ProjectCard";
 import NewProjectModal from "../Modals/NewProjectModal";
-import { useDispatch, useSelector } from 'react-redux'; // ADD THIS IMPORT
-import { addTodoBox } from '../ReduxStore/Reducers'; // ADD THIS IMPORT
+import { useDispatch, useSelector } from 'react-redux'; 
+import { addTodoBox } from '../ReduxStore/Reducers'; 
 
 const ProjectDashboard = () => {
 
     
-
+  const colors = [
+  "bg-green-100",
+  "bg-yellow-100",
+  "bg-red-100",
+  "bg-blue-100",
+  "bg-purple-100",
+  "bg-pink-100"
+];
 const dispatch = useDispatch();
   const { todoBoxes, todos } = useSelector(state => state.todos);
+  const numberOfProjects = todoBoxes.length;
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const createNewTodoBox = () => {
   setIsModalOpen(true);
 };
+const totalTasks = Object.values(todos).reduce(
+  (sum, taskArray) => sum + taskArray.length,
+  0
+);
+
+const totalCompletedTasks = Object.values(todos).reduce(
+  (sum, taskArray) => sum + taskArray.filter(task => task.completed).length,
+  0
+);
+const totalNotCompletedTasks = Object.values(todos).reduce(
+  (sum, taskArray) => sum + taskArray.filter(task => !task.completed).length,
+  0
+);
+
 
 
 const handleModalSubmit = (projectData) => {
@@ -25,9 +47,9 @@ const handleModalSubmit = (projectData) => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* Main Content */}
+  
       <div className="flex-1 p-6">
-        {/* Header */}
+        
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-semibold text-gray-900">All Projects</h1>
           <button onClick={() => createNewTodoBox()} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium">
@@ -35,9 +57,9 @@ const handleModalSubmit = (projectData) => {
           </button>
         </div>
 
-        {/* Controls */}
+        
         <div className="flex justify-between items-center mb-6">
-          {/* View Toggle */}
+          
           <div className="flex items-center space-x-2 bg-white rounded-lg p-1 shadow-sm">
             <button className="p-2 rounded-md bg-gray-100 text-gray-700">
               <Grid size={18} />
@@ -47,7 +69,7 @@ const handleModalSubmit = (projectData) => {
             </button>
           </div>
 
-          {/* Filters */}
+         
           <div className="flex space-x-3">
             <select className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option>All Clients</option>
@@ -69,9 +91,9 @@ const handleModalSubmit = (projectData) => {
         <ProjectCard projects={todoBoxes} />
       </div>
 
-      {/* Right Sidebar */}
+    
       <div className="w-80 bg-white shadow-lg p-6">
-        {/* User Profile */}
+        
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
@@ -89,42 +111,28 @@ const handleModalSubmit = (projectData) => {
           </button>
         </div>
 
-        {/* Project Stats */}
+        
         <div className="grid grid-cols-2 gap-4 mb-8">
           <div>
             <p className="text-sm text-gray-500 mb-1">Total projects:</p>
-            <p className="text-2xl font-bold text-gray-900">189</p>
+            <p className="text-2xl font-bold text-gray-900">{numberOfProjects}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-500 mb-1">Completed:</p>
-            <p className="text-2xl font-bold text-gray-900">174</p>
+            <p className="text-sm text-gray-500 mb-1">Total Tasks:</p>
+            <p className="text-2xl font-bold text-gray-900">{totalTasks}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500 mb-1">In progress:</p>
-            <p className="text-2xl font-bold text-gray-900">13</p>
+            <p className="text-2xl font-bold text-gray-900">{totalNotCompletedTasks}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-500 mb-1">Out of schedule:</p>
-            <p className="text-2xl font-bold text-gray-900">2</p>
+            <p className="text-sm text-gray-500 mb-1">Completed:</p>
+            <p className="text-2xl font-bold text-gray-900">{totalCompletedTasks}</p>
           </div>
         </div>
 
-        {/* Illustration */}
-        <div className="bg-purple-600 rounded-2xl p-6 mb-6 relative overflow-hidden">
-          <div className="absolute inset-0">
-            <div className="absolute top-4 left-4 w-2 h-2 bg-white rounded-full opacity-60"></div>
-            <div className="absolute top-8 right-8 w-1 h-1 bg-white rounded-full opacity-40"></div>
-            <div className="absolute bottom-6 left-6 w-1.5 h-1.5 bg-white rounded-full opacity-50"></div>
-          </div>
-          <div className="relative z-10 flex items-center justify-center h-32">
-            <div className="text-white text-center">
-              <div className="mb-2">🎉</div>
-              <p className="text-sm opacity-90">Great work!</p>
-            </div>
-          </div>
-        </div>
 
-        {/* Activity Feed */}
+      
         <div>
           <h3 className="font-semibold text-gray-900 mb-4">Activity Feed</h3>
 
