@@ -1,6 +1,4 @@
-const API_BASE_URL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:5000/api' 
-  : 'https://todo-list-gdg-backend.onrender.com';
+const API_BASE_URL = 'https://todo-list-gdg-backend.onrender.com/api';
 
 class ProjectService {
   // Get auth token from storage (matching AuthService format)
