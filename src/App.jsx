@@ -34,7 +34,7 @@ const App = () => {
           <AuthInitializer>
             <Routes>
               <Route path="/todo" element={<MainPage />} />
-              <Route path="/landing-page" element={<LandingPage />} />
+              <Route path="/" element={<LandingPage />} />
               <Route path="*" element={<h1>404 - Page Not Found</h1>} />
             </Routes>
           </AuthInitializer>
