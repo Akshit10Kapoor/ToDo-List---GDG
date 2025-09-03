@@ -109,7 +109,7 @@ const ProjectDashboard = () => {
     localStorage.removeItem("user");
     sessionStorage.removeItem("token");
     sessionStorage.removeItem("user");
-    navigate("/landing-page");
+    navigate("/");
   };
 
   const handleModalSubmit = async (projectData) => {
