@@ -14,7 +14,7 @@ import {
   deleteTodoBox 
 } from '../ReduxStore/Reducers';
 
-const ProjectCard = ({ projects, onDelete }) => {
+const ProjectCard = ({ projects, onDelete, isDarkMode, viewMode = 'grid' }) => {
   const [expandedCards, setExpandedCards] = useState(new Set());
   const [newTodoText, setNewTodoText] = useState({});
   const [loadedProjects, setLoadedProjects] = useState(new Set());
@@ -27,6 +27,24 @@ const ProjectCard = ({ projects, onDelete }) => {
     "bg-purple-100",
     "bg-pink-100"
   ];
+
+  // Dark mode color mappings
+  const darkColors = [
+    "bg-green-800",
+    "bg-yellow-800", 
+    "bg-red-800",
+    "bg-blue-800",
+    "bg-purple-800",
+    "bg-pink-800"
+  ];
+
+  // Get the appropriate color class based on theme
+  const getColorClass = (lightColor) => {
+    if (!isDarkMode) return lightColor;
+    
+    const colorIndex = colors.indexOf(lightColor);
+    return colorIndex !== -1 ? darkColors[colorIndex] : 'bg-gray-700';
+  };
 
   const { todos, tasksLoading, tasksError, loading } = useSelector(state => state.todos);
   const { user: authData } = useSelector(state => state.auth);
@@ -147,225 +165,345 @@ const ProjectCard = ({ projects, onDelete }) => {
   };
 
   // Load tasks for visible projects on mount
-useEffect(() => {
-  if (authData && projects.length > 0) {
-    projects.forEach(project => {
-      // Only load if we don't have tasks for this project yet
-      if (!todos[project.id] && !loadedProjects.has(project.id)) {
-        dispatch(fetchProjectTasks(project.id))
-          .then(() => {
-            setLoadedProjects(prev => new Set(prev).add(project.id));
-          })
-          .catch(error => {
-            console.error('Failed to load tasks for project:', project.id, error);
-          });
-      }
-    });
-  }
-}, [projects, authData, dispatch]); // Don't include todos or loadedProjects in dependencies
+  useEffect(() => {
+    if (authData && projects.length > 0) {
+      projects.forEach(project => {
+        // Only load if we don't have tasks for this project yet
+        if (!todos[project.id] && !loadedProjects.has(project.id)) {
+          dispatch(fetchProjectTasks(project.id))
+            .then(() => {
+              setLoadedProjects(prev => new Set(prev).add(project.id));
+            })
+            .catch(error => {
+              console.error('Failed to load tasks for project:', project.id, error);
+            });
+        }
+      });
+    }
+  }, [authData, dispatch]); // Don't include todos or loadedProjects in dependencies
+
+  // Dynamic container class based on view mode
+  const containerClass = viewMode === 'grid' 
+    ? "flex flex-wrap gap-6" 
+    : "space-y-4";
 
   return (
-    <div className="flex flex-wrap gap-6">
+    <>
       {/* Error Display */}
       {tasksError && (
-        <div className="w-full mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
+        <div className={`w-full mb-4 p-4 rounded-lg transition-colors duration-300 ${
+          isDarkMode 
+            ? 'bg-red-900 text-red-200' 
+            : 'bg-red-100 text-red-700'
+        }`}>
           Task Error: {tasksError}
         </div>
       )}
 
-      {projects.map((project, index) => {
-        const colorClass = project.color;
-        const isExpanded = expandedCards.has(project.id);
-        const projectTodos = todos[project.id] || [];
-        const hasTodos = projectTodos.length > 0;
-        const isLoadingTasks = tasksLoading && isExpanded;
+      <div className={`${containerClass} transition-all duration-500 ease-in-out`}>
+        {projects.map((project, index) => {
+          const colorClass = getColorClass(project.color);
+          const isExpanded = expandedCards.has(project.id);
+          const projectTodos = todos[project.id] || [];
+          const hasTodos = projectTodos.length > 0;
+          const isLoadingTasks = tasksLoading && isExpanded;
 
-        return (
-          <div
-            key={project.id}
-            className={`
-              ${colorClass} rounded-xl p-6 shadow-sm hover:shadow-md cursor-pointer
-              transition-all duration-500 ease-in-out 
-              ${isExpanded ? "w-[550px] h-[400px]" : "w-72 h-60"}
-            `}
-            onClick={(e) => {
-              // Only expand if clicking on the card itself, not on interactive elements
-              if (e.target === e.currentTarget || 
-                  (!e.target.closest('button') && !e.target.closest('input') && !e.target.closest('.todo-item'))) {
-                handleClick(project.id);
-              }
-            }}
-          >
-            {!isExpanded ? (
-              // Collapsed View
-              <>
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">{project.title}</h3>
-                  <div className="flex items-center space-x-2">
-                    {project.starred && (
-                      <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                    )}
-                    <button className="text-gray-400 hover:text-gray-600" onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteClick(project.id);
-                    }}>
-                      <Trash size={18} />
-                    </button>
-                  </div>
-                </div>
+          // Dynamic card dimensions based on view mode and expansion state
+          const cardDimensions = viewMode === 'list' 
+            ? `w-full ${isExpanded ? "h-[400px]" : "h-20"}` 
+            : `${isExpanded ? "w-[550px] h-[400px]" : "w-72 h-60"}`;
 
-                <div className="mb-4">
-                  {project.subtitle && (
-                    <p className="text-sm text-gray-600 mb-3">- {project.subtitle}</p>
-                  )}
-                  
-                  {!hasTodos && (
-                    <div className="transition-all duration-300 opacity-70">
-                      <p className="text-xs text-gray-500 italic">{getWelcomeMessage()}</p>
-                    </div>
-                  )}
-                </div>
-
-                {hasTodos && (
-                  <div className="space-y-2">
-                    {projectTodos.slice(0, 3).map((todo) => (
-                      <div key={todo.id} className="flex items-center space-x-2">
-                        <div className={`w-2 h-2 rounded-full ${todo.completed ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                        <p className={`text-sm ${todo.completed ? 'line-through text-gray-500' : 'text-gray-700'}`}>
-                          {todo.text.length > 30 ? todo.text.substring(0, 30) + '...' : todo.text}
+          return (
+            <div
+              key={project.id}
+              className={`
+                ${colorClass} rounded-xl p-6 shadow-sm hover:shadow-md cursor-pointer
+                transition-all duration-500 ease-in-out transform hover:scale-[1.02]
+                ${cardDimensions}
+              `}
+              onClick={(e) => {
+                // Only expand if clicking on the card itself, not on interactive elements
+                if (e.target === e.currentTarget || 
+                    (!e.target.closest('button') && !e.target.closest('input') && !e.target.closest('.todo-item'))) {
+                  handleClick(project.id);
+                }
+              }}
+            >
+              {!isExpanded ? (
+                // Collapsed View
+                viewMode === 'list' ? (
+                  // List view: horizontal layout
+                  <div className="flex items-center justify-between h-full">
+                    <div className="flex items-center space-x-4">
+                      <h3 className={`text-lg font-semibold transition-colors duration-300 ${
+                        isDarkMode ? 'text-gray-100' : 'text-gray-900'
+                      }`}>
+                        {project.title}
+                      </h3>
+                      {project.subtitle && (
+                        <p className={`text-sm transition-colors duration-300 ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                        }`}>
+                          - {project.subtitle}
                         </p>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center space-x-6">
+                      <div className={`text-sm transition-colors duration-300 ${
+                        isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                      }`}>
+                        {projectTodos.length} tasks
                       </div>
-                    ))}
-                    {projectTodos.length > 3 && (
-                      <p className="text-xs text-gray-500 italic">+{projectTodos.length - 3} more tasks...</p>
+                      <div className="flex items-center space-x-2">
+                        {project.starred && (
+                          <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                        )}
+                        <button className={`transition-all duration-300 hover:scale-110 ${
+                          isDarkMode 
+                            ? 'text-gray-300 hover:text-gray-100' 
+                            : 'text-gray-400 hover:text-gray-600'
+                        }`} onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteClick(project.id);
+                        }}>
+                          <Trash size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  // Grid view: original vertical layout
+                  <>
+                    <div className="flex justify-between items-start mb-4">
+                      <h3 className={`text-lg font-semibold transition-colors duration-300 ${
+                        isDarkMode ? 'text-gray-100' : 'text-gray-900'
+                      }`}>
+                        {project.title}
+                      </h3>
+                      <div className="flex items-center space-x-2">
+                        {project.starred && (
+                          <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                        )}
+                        <button className={`transition-all duration-300 hover:scale-110 ${
+                          isDarkMode 
+                            ? 'text-gray-300 hover:text-gray-100' 
+                            : 'text-gray-400 hover:text-gray-600'
+                        }`} onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteClick(project.id);
+                        }}>
+                          <Trash size={18} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      {project.subtitle && (
+                        <p className={`text-sm mb-3 transition-colors duration-300 ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                        }`}>
+                          - {project.subtitle}
+                        </p>
+                      )}
+                      
+                      {!hasTodos && (
+                        <div className="transition-all duration-300 opacity-70">
+                          <p className={`text-xs italic transition-colors duration-300 ${
+                            isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                          }`}>
+                            {getWelcomeMessage()}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {hasTodos && (
+                      <div className="space-y-2">
+                        {projectTodos.slice(0, 3).map((todo) => (
+                          <div key={todo.id} className="flex items-center space-x-2">
+                            <div className={`w-2 h-2 rounded-full ${todo.completed ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                            <p className={`text-sm transition-colors duration-300 ${
+                              todo.completed 
+                                ? `line-through ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}` 
+                                : isDarkMode ? 'text-gray-200' : 'text-gray-700'
+                            }`}>
+                              {todo.text.length > 30 ? todo.text.substring(0, 30) + '...' : todo.text}
+                            </p>
+                          </div>
+                        ))}
+                        {projectTodos.length > 3 && (
+                          <p className={`text-xs italic transition-colors duration-300 ${
+                            isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                          }`}>
+                            +{projectTodos.length - 3} more tasks...
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )
+              ) : (
+                // Expanded View (same for both views)
+                <div className="h-full flex flex-col">
+                  {/* Header */}
+                  <div className="text-center mb-6">
+                    <div className="flex justify-between items-center mb-2">
+                      <div></div>
+                      <h3 className={`text-xl font-bold transition-colors duration-300 ${
+                        isDarkMode ? 'text-gray-100' : 'text-gray-900'
+                      }`}>
+                        {project.title}
+                      </h3>
+                      <div className="flex items-center space-x-2">
+                        {project.starred && (
+                          <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                        )}
+                        <button className={`transition-all duration-300 hover:scale-110 ${
+                          isDarkMode 
+                            ? 'text-gray-300 hover:text-gray-100' 
+                            : 'text-gray-400 hover:text-gray-600'
+                        }`} onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteClick(project.id);
+                        }}>
+                          <Trash size={18} />
+                        </button>
+                      </div>
+                    </div>
+                    {project.subtitle && (
+                      <p className={`text-sm transition-colors duration-300 ${
+                        isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                      }`}>
+                        - {project.subtitle}
+                      </p>
                     )}
                   </div>
-                )}
-              </>
-            ) : (
-              // Expanded View
-              <div className="h-full flex flex-col">
-                {/* Header */}
-                <div className="text-center mb-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <div></div>
-                    <h3 className="text-xl font-bold text-gray-900">{project.title}</h3>
-                    <div className="flex items-center space-x-2">
-                      {project.starred && (
-                        <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                      )}
-                      <button className="text-gray-400 hover:text-gray-600" onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteClick(project.id);
-                      }}>
-                        <Trash size={18} />
+
+                  {/* Add Task Input */}
+                  <div className="mb-4">
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        placeholder="Add a new task..."
+                        className={`flex-1 px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 ${
+                          isDarkMode 
+                            ? 'border-gray-600 bg-gray-700/50 text-gray-200 placeholder-gray-400' 
+                            : 'border-gray-300 bg-white/50 text-gray-900 placeholder-gray-500'
+                        }`}
+                        value={newTodoText[project.id] || ''}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          setNewTodoText(prev => ({
+                            ...prev,
+                            [project.id]: e.target.value
+                          }));
+                        }}
+                        onKeyPress={(e) => handleKeyPress(e, project.id)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddTodo(project.id);
+                        }}
+                        className={`px-3 py-2 text-white rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center ${
+                          isDarkMode 
+                            ? 'bg-gray-600 hover:bg-gray-500' 
+                            : 'bg-slate-400 hover:bg-slate-600'
+                        }`}
+                        disabled={tasksLoading}
+                      >
+                        <Plus size={16} />
                       </button>
                     </div>
                   </div>
-                  {project.subtitle && (
-                    <p className="text-sm text-gray-600">- {project.subtitle}</p>
-                  )}
-                </div>
 
-                {/* Add Task Input */}
-                <div className="mb-4">
-                  <div className="flex space-x-2">
-                    <input
-                      type="text"
-                      placeholder="Add a new task..."
-                      className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50"
-                      value={newTodoText[project.id] || ''}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        setNewTodoText(prev => ({
-                          ...prev,
-                          [project.id]: e.target.value
-                        }));
-                      }}
-                      onKeyPress={(e) => handleKeyPress(e, project.id)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddTodo(project.id);
-                      }}
-                      className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center"
-                      disabled={tasksLoading}
-                    >
-                      <Plus size={16} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Loading State */}
-                {isLoadingTasks && (
-                  <div className="flex justify-center items-center py-8">
-                    <div className="text-sm text-gray-500">Loading tasks...</div>
-                  </div>
-                )}
-
-                {/* Todo List */}
-                <div className="flex-1 overflow-hidden">
-                  {!isLoadingTasks && projectTodos.length === 0 ? (
-                    <div className="text-center py-8">
-                      <p className="text-gray-500 text-sm">No tasks yet. Add your first task above!</p>
+                  {/* Loading State */}
+                  {isLoadingTasks && (
+                    <div className="flex justify-center items-center py-8">
+                      <div className={`text-sm transition-colors duration-300 ${
+                        isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                      }`}>
+                        Loading tasks...
+                      </div>
                     </div>
-                  ) : !isLoadingTasks && (
-                    <div className="h-full overflow-y-auto space-y-2 pr-2" style={{maxHeight: '200px'}}>
-                      {projectTodos.map((todo, todoIndex) => (
-                        <div
-                          key={todo.id}
-                          className={`todo-item flex items-center space-x-3 p-3 rounded-lg bg-white/30 hover:bg-white/50 transition-all duration-200 ${
-                            todoIndex >= 5 ? 'border-t border-gray-200' : ''
-                          }`}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            onClick={() => toggleTodo(project.id, todo.id)}
-                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-                              todo.completed 
-                                ? 'bg-green-500 border-green-500 text-white' 
-                                : 'border-gray-300 hover:border-green-400'
+                  )}
+
+                  {/* Todo List */}
+                  <div className="flex-1 overflow-hidden">
+                    {!isLoadingTasks && projectTodos.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className={`text-sm transition-colors duration-300 ${
+                          isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                        }`}>
+                          No tasks yet. Add your first task above!
+                        </p>
+                      </div>
+                    ) : !isLoadingTasks && (
+                      <div className="h-full overflow-y-auto space-y-2 pr-2" style={{maxHeight: '200px'}}>
+                        {projectTodos.map((todo, todoIndex) => (
+                          <div
+                            key={todo.id}
+                            className={`todo-item flex items-center space-x-3 p-3 rounded-lg transition-all duration-300 hover:scale-[1.02] ${
+                              isDarkMode 
+                                ? 'bg-gray-700/30 hover:bg-gray-700/50' 
+                                : 'bg-white/30 hover:bg-white/50'
+                            } ${
+                              todoIndex >= 5 ? `border-t ${isDarkMode ? 'border-gray-600' : 'border-gray-200'}` : ''
                             }`}
-                            disabled={tasksLoading}
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            {todo.completed && <Check size={12} />}
-                          </button>
-                          
-                          <p className={`flex-1 text-sm transition-all duration-200 ${
-                            todo.completed 
-                              ? 'line-through text-gray-500' 
-                              : 'text-gray-700'
-                          }`}>
-                            {todo.text}
-                          </p>
-                          
-                          <button
-                            onClick={() => deleteTodo(project.id, todo.id)}
-                            className="text-red-400 hover:text-red-600 transition-colors p-1"
-                            disabled={tasksLoading}
-                          >
-                            <X size={14} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                            <button
+                              onClick={() => toggleTodo(project.id, todo.id)}
+                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 hover:scale-110 ${
+                                todo.completed 
+                                  ? 'bg-green-500 border-green-500 text-white' 
+                                  : `border-gray-300 hover:border-green-400 ${isDarkMode ? 'border-gray-500' : ''}`
+                              }`}
+                              disabled={tasksLoading}
+                            >
+                              {todo.completed && <Check size={12} />}
+                            </button>
+                            
+                            <p className={`flex-1 text-sm transition-all duration-300 ${
+                              todo.completed 
+                                ? `line-through ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}` 
+                                : isDarkMode ? 'text-gray-200' : 'text-gray-700'
+                            }`}>
+                              {todo.text}
+                            </p>
+                            
+                            <button
+                              onClick={() => deleteTodo(project.id, todo.id)}
+                              className="text-red-400 hover:text-red-600 transition-all duration-300 p-1 hover:scale-110"
+                              disabled={tasksLoading}
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
-                {/* Footer Stats */}
-                <div className="mt-4 pt-2 border-t border-gray-200">
-                  <p className="text-xs text-gray-500 text-center">
-                    {projectTodos.filter(t => !t.completed).length} pending, {projectTodos.filter(t => t.completed).length} completed
-                  </p>
+                  {/* Footer Stats */}
+                  <div className={`mt-4 pt-2 border-t transition-colors duration-300 ${
+                    isDarkMode ? 'border-gray-600' : 'border-gray-200'
+                  }`}>
+                    <p className={`text-xs text-center transition-colors duration-300 ${
+                      isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                    }`}>
+                      {projectTodos.filter(t => !t.completed).length} pending, {projectTodos.filter(t => t.completed).length} completed
+                    </p>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 };
 

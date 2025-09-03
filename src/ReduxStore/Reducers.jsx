@@ -2,9 +2,11 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import ProjectService from "../services/projectService";
 import TaskService from "../services/taskService";
 
+// ==================== ASYNC THUNKS ====================
+
 // Project Async Thunks
 export const fetchProjects = createAsyncThunk(
-  'todos/fetchProjects',
+  "todos/fetchProjects",
   async (_, { rejectWithValue }) => {
     try {
       const projects = await ProjectService.getAllProjects();
@@ -16,7 +18,7 @@ export const fetchProjects = createAsyncThunk(
 );
 
 export const createProject = createAsyncThunk(
-  'todos/createProject',
+  "todos/createProject",
   async (projectData, { rejectWithValue }) => {
     try {
       const project = await ProjectService.createProject(projectData);
@@ -28,7 +30,7 @@ export const createProject = createAsyncThunk(
 );
 
 export const deleteProjectAsync = createAsyncThunk(
-  'todos/deleteProject',
+  "todos/deleteProject",
   async (projectId, { rejectWithValue }) => {
     try {
       await ProjectService.deleteProject(projectId);
@@ -40,7 +42,7 @@ export const deleteProjectAsync = createAsyncThunk(
 );
 
 export const updateProject = createAsyncThunk(
-  'todos/updateProject',
+  "todos/updateProject",
   async ({ projectId, updates }, { rejectWithValue }) => {
     try {
       const project = await ProjectService.updateProject(projectId, updates);
@@ -53,7 +55,7 @@ export const updateProject = createAsyncThunk(
 
 // Task Async Thunks
 export const fetchProjectTasks = createAsyncThunk(
-  'todos/fetchProjectTasks',
+  "todos/fetchProjectTasks",
   async (projectId, { rejectWithValue }) => {
     try {
       const tasks = await TaskService.getProjectTasks(projectId);
@@ -65,13 +67,13 @@ export const fetchProjectTasks = createAsyncThunk(
 );
 
 export const createTask = createAsyncThunk(
-  'todos/createTask',
+  "todos/createTask",
   async ({ projectId, taskData }, { rejectWithValue }) => {
     try {
       const taskPayload = {
         ...taskData,
         projectId: projectId,
-        title: taskData.text || taskData.title // Handle both text and title
+        title: taskData.text || taskData.title,
       };
       const task = await TaskService.createTask(taskPayload);
       return { projectId, task };
@@ -82,7 +84,7 @@ export const createTask = createAsyncThunk(
 );
 
 export const updateTask = createAsyncThunk(
-  'todos/updateTask',
+  "todos/updateTask",
   async ({ taskId, updates }, { rejectWithValue }) => {
     try {
       const task = await TaskService.updateTask(taskId, updates);
@@ -94,7 +96,7 @@ export const updateTask = createAsyncThunk(
 );
 
 export const deleteTask = createAsyncThunk(
-  'todos/deleteTask',
+  "todos/deleteTask",
   async ({ taskId, projectId }, { rejectWithValue }) => {
     try {
       await TaskService.deleteTask(taskId);
@@ -106,7 +108,7 @@ export const deleteTask = createAsyncThunk(
 );
 
 export const toggleTaskCompletion = createAsyncThunk(
-  'todos/toggleTask',
+  "todos/toggleTask",
   async ({ taskId, projectId }, { rejectWithValue }) => {
     try {
       const task = await TaskService.toggleTask(taskId);
@@ -118,8 +120,8 @@ export const toggleTaskCompletion = createAsyncThunk(
 );
 
 export const fetchActivityFeed = createAsyncThunk(
-  'todos/fetchActivityFeed',
-  async ({ limit = 20, page = 1 } = {}, { rejectWithValue }) => {
+  "todos/fetchActivityFeed",
+  async ({ limit = 15, page = 1 } = {}, { rejectWithValue }) => {
     try {
       const activities = await TaskService.getActivityFeed(limit, page);
       return activities;
@@ -129,24 +131,48 @@ export const fetchActivityFeed = createAsyncThunk(
   }
 );
 
+// ==================== INITIAL STATE ====================
+
 const todoInitialState = {
+  // Project data
   todoBoxes: [],
   todos: {},
+  
+  // Activity feed - limited size
   activityFeed: [],
+  
+  // Loading states
   loading: false,
-  error: null,
   tasksLoading: false,
+  activityLoading: false,
+  
+  // Error states
+  error: null,
   tasksError: null,
+  activityError: null,
 };
 
+// ==================== HELPER FUNCTIONS ====================
+
 const addActivity = (state, activity) => {
-  state.activityFeed.unshift(activity);
-  if (state.activityFeed.length > 15) {
-    state.activityFeed.pop();
+  // Only add if it's not a duplicate
+  const isDuplicate = state.activityFeed.some(
+    (item) => 
+      item.type === activity.type && 
+      item.task === activity.task && 
+      item.projectId === activity.projectId &&
+      Math.abs(new Date(item.timestamp) - new Date(activity.timestamp)) < 1000
+  );
+  
+  if (!isDuplicate) {
+    state.activityFeed.unshift(activity);
+    // Keep only last 15 activities
+    if (state.activityFeed.length > 15) {
+      state.activityFeed = state.activityFeed.slice(0, 15);
+    }
   }
 };
 
-// Helper function to convert backend project to frontend format
 const convertProjectFormat = (backendProject) => ({
   id: backendProject._id,
   title: backendProject.title,
@@ -160,10 +186,9 @@ const convertProjectFormat = (backendProject) => ({
   owner: backendProject.owner,
   collaborators: backendProject.collaborators,
   createdAt: backendProject.createdAt,
-  updatedAt: backendProject.updatedAt
+  updatedAt: backendProject.updatedAt,
 });
 
-// Helper function to convert backend task to frontend format
 const convertTaskFormat = (backendTask) => ({
   id: backendTask._id,
   text: backendTask.title,
@@ -180,33 +205,40 @@ const convertTaskFormat = (backendTask) => ({
   order: backendTask.order,
   createdAt: backendTask.createdAt,
   updatedAt: backendTask.updatedAt,
-  completedAt: backendTask.completedAt
+  completedAt: backendTask.completedAt,
 });
+
+const getProjectTitle = (state, projectId) => {
+  const project = state.todoBoxes.find((p) => p.id === projectId);
+  return project ? project.title : "Unknown project";
+};
+
+// ==================== TODO SLICE ====================
 
 const todoSlice = createSlice({
   name: "todos",
   initialState: todoInitialState,
   reducers: {
-    // Keep existing local reducers for backward compatibility and offline functionality
+    // Local actions - only for offline/fallback scenarios
     addTodo: (state, action) => {
       const { boxId, text } = action.payload;
       if (!state.todos[boxId]) state.todos[boxId] = [];
 
-      const newTask = {
-        id: Date.now(),
-        text,
+      const newTask = { 
+        id: `temp_${Date.now()}`, // Temporary ID for local tasks
+        text, 
         completed: false,
+        createdAt: new Date().toISOString()
       };
-
       state.todos[boxId].push(newTask);
-      const project = state.todoBoxes.find((p) => p.id === boxId);
 
+      // Only add activity for local tasks (not API tasks)
       addActivity(state, {
-        id: Date.now(),
+        id: `activity_${Date.now()}`,
         type: "task_created",
         task: newTask.text,
         projectId: boxId,
-        projectName: project ? project.title : "Unknown project",
+        projectName: getProjectTitle(state, boxId),
         timestamp: new Date().toISOString(),
       });
     },
@@ -217,17 +249,16 @@ const todoSlice = createSlice({
         state.todos[boxId] = state.todos[boxId].map((todo) => {
           if (todo.id === todoId) {
             const updated = { ...todo, completed: !todo.completed };
-            const project = state.todoBoxes.find((p) => p.id === boxId);
-
+            
+            // Only add activity for local toggles
             addActivity(state, {
-              id: Date.now(),
+              id: `activity_${Date.now()}`,
               type: updated.completed ? "task_completed" : "task_reopened",
               task: updated.text,
               projectId: boxId,
-              projectName: project ? project.title : "Unknown project",
+              projectName: getProjectTitle(state, boxId),
               timestamp: new Date().toISOString(),
             });
-
             return updated;
           }
           return todo;
@@ -239,54 +270,47 @@ const todoSlice = createSlice({
       const { boxId, todoId } = action.payload;
       if (state.todos[boxId]) {
         const taskToDelete = state.todos[boxId].find((t) => t.id === todoId);
-        const project = state.todoBoxes.find((p) => p.id === boxId);
-
         state.todos[boxId] = state.todos[boxId].filter(
           (todo) => todo.id !== todoId
         );
-
+        
         if (taskToDelete) {
           addActivity(state, {
-            id: Date.now(),
+            id: `activity_${Date.now()}`,
             type: "task_deleted",
             task: taskToDelete.text,
             projectId: boxId,
-            projectName: project ? project.title : "Unknown project",
+            projectName: getProjectTitle(state, boxId),
             timestamp: new Date().toISOString(),
           });
         }
       }
     },
 
-    clearError: (state) => {
-      state.error = null;
-      state.tasksError = null;
-    },
-
-    // Local-only project creation (fallback)
     addTodoBox: (state, action) => {
-      const newBoxId = Date.now();
+      const newBoxId = `temp_${Date.now()}`;
       const colors = [
         "bg-green-100",
-        "bg-yellow-100",
+        "bg-yellow-100", 
         "bg-red-100",
         "bg-blue-100",
         "bg-purple-100",
         "bg-pink-100",
       ];
-
+      
       const newProject = {
         id: newBoxId,
         title: action.payload?.title || "Todo List",
         subtitle: action.payload?.subtitle || "",
-        color: colors[newBoxId % colors.length],
+        color: colors[state.todoBoxes.length % colors.length],
+        createdAt: new Date().toISOString(),
       };
-
+      
       state.todoBoxes.push(newProject);
       state.todos[newBoxId] = [];
 
       addActivity(state, {
-        id: Date.now(),
+        id: `activity_${Date.now()}`,
         type: "project_created",
         task: newProject.title,
         projectId: newBoxId,
@@ -298,13 +322,12 @@ const todoSlice = createSlice({
     deleteTodoBox: (state, action) => {
       const boxId = action.payload;
       const projectToDelete = state.todoBoxes.find((box) => box.id === boxId);
-
       state.todoBoxes = state.todoBoxes.filter((box) => box.id !== boxId);
       delete state.todos[boxId];
-
+      
       if (projectToDelete) {
         addActivity(state, {
-          id: Date.now(),
+          id: `activity_${Date.now()}`,
           type: "project_deleted",
           task: projectToDelete.title,
           projectId: boxId,
@@ -313,103 +336,117 @@ const todoSlice = createSlice({
         });
       }
     },
+
+    // Utility actions
+    clearError: (state) => {
+      state.error = null;
+      state.tasksError = null;
+      state.activityError = null;
+    },
+
+    clearActivityFeed: (state) => {
+      state.activityFeed = [];
+    },
+
+    // Reset state on logout
+    resetTodoState: (state) => {
+      Object.assign(state, todoInitialState);
+    },
   },
+
   extraReducers: (builder) => {
     builder
-      // Fetch Projects
+      // ==================== PROJECTS ====================
       .addCase(fetchProjects.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(fetchProjects.fulfilled, (state, action) => {
         state.loading = false;
-        state.todoBoxes = action.payload.map(convertProjectFormat);
-        // Initialize todos object for each project
-        action.payload.forEach(project => {
-          if (!state.todos[project._id]) {
-            state.todos[project._id] = [];
+        
+        // Sort by createdAt (oldest first)
+        const sortedProjects = [...action.payload].sort(
+          (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+        );
+
+        state.todoBoxes = sortedProjects.map(convertProjectFormat);
+
+        // Preserve existing todos but ensure all projects have todo arrays
+        sortedProjects.forEach((project) => {
+          const projectId = project._id;
+          if (!state.todos[projectId]) {
+            state.todos[projectId] = [];
+          }
+        });
+
+        // Clean up todos for deleted projects
+        const currentProjectIds = sortedProjects.map(p => p._id);
+        Object.keys(state.todos).forEach(projectId => {
+          if (!currentProjectIds.includes(projectId) && !projectId.startsWith('temp_')) {
+            delete state.todos[projectId];
           }
         });
       })
       .addCase(fetchProjects.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload || "Failed to fetch projects";
       })
 
-      // Create Project
       .addCase(createProject.pending, (state) => {
         state.loading = true;
-        state.error = null;
       })
       .addCase(createProject.fulfilled, (state, action) => {
         state.loading = false;
         const newProject = convertProjectFormat(action.payload);
-        state.todoBoxes.push(newProject);
-        state.todos[newProject.id] = [];
 
-        addActivity(state, {
-          id: Date.now(),
-          type: "project_created",
-          task: newProject.title,
-          projectId: newProject.id,
-          projectName: newProject.title,
-          timestamp: new Date().toISOString(),
-        });
+        // Insert in sorted order
+        const insertIndex = state.todoBoxes.findIndex(
+          (p) => new Date(p.createdAt) > new Date(newProject.createdAt)
+        );
+        
+        if (insertIndex === -1) {
+          state.todoBoxes.push(newProject);
+        } else {
+          state.todoBoxes.splice(insertIndex, 0, newProject);
+        }
+
+        state.todos[newProject.id] = [];
+        
+        // Activity is handled by the backend, don't add local activity
       })
       .addCase(createProject.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload || "Failed to create project";
       })
 
-      // Delete Project
       .addCase(deleteProjectAsync.pending, (state) => {
         state.loading = true;
-        state.error = null;
       })
       .addCase(deleteProjectAsync.fulfilled, (state, action) => {
         state.loading = false;
         const projectId = action.payload;
-        const projectToDelete = state.todoBoxes.find((box) => box.id === projectId);
-
+        
         state.todoBoxes = state.todoBoxes.filter((box) => box.id !== projectId);
         delete state.todos[projectId];
-
-        if (projectToDelete) {
-          addActivity(state, {
-            id: Date.now(),
-            type: "project_deleted",
-            task: projectToDelete.title,
-            projectId: projectId,
-            projectName: projectToDelete.title,
-            timestamp: new Date().toISOString(),
-          });
-        }
+        
+        // Activity is handled by the backend
       })
       .addCase(deleteProjectAsync.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload || "Failed to delete project";
       })
 
-      // Update Project
-      .addCase(updateProject.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
       .addCase(updateProject.fulfilled, (state, action) => {
-        state.loading = false;
         const updatedProject = convertProjectFormat(action.payload);
-        const index = state.todoBoxes.findIndex((box) => box.id === updatedProject.id);
-        
+        const index = state.todoBoxes.findIndex(
+          (box) => box.id === updatedProject.id
+        );
         if (index !== -1) {
           state.todoBoxes[index] = updatedProject;
         }
       })
-      .addCase(updateProject.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
 
-      // Fetch Project Tasks
+      // ==================== TASKS ====================
       .addCase(fetchProjectTasks.pending, (state) => {
         state.tasksLoading = true;
         state.tasksError = null;
@@ -417,152 +454,106 @@ const todoSlice = createSlice({
       .addCase(fetchProjectTasks.fulfilled, (state, action) => {
         state.tasksLoading = false;
         const { projectId, tasks } = action.payload;
-        state.todos[projectId] = tasks.map(convertTaskFormat);
+        
+        // Only update if we actually got tasks from the API
+        if (Array.isArray(tasks)) {
+          state.todos[projectId] = tasks.map(convertTaskFormat);
+        }
       })
       .addCase(fetchProjectTasks.rejected, (state, action) => {
         state.tasksLoading = false;
-        state.tasksError = action.payload;
+        state.tasksError = action.payload || "Failed to fetch tasks";
       })
 
-      // Create Task
       .addCase(createTask.pending, (state) => {
         state.tasksLoading = true;
-        state.tasksError = null;
       })
       .addCase(createTask.fulfilled, (state, action) => {
         state.tasksLoading = false;
         const { projectId, task } = action.payload;
         
         if (!state.todos[projectId]) state.todos[projectId] = [];
+        
         const convertedTask = convertTaskFormat(task);
         state.todos[projectId].push(convertedTask);
-
-        const project = state.todoBoxes.find((p) => p.id === projectId);
-        addActivity(state, {
-          id: Date.now(),
-          type: "task_created",
-          task: convertedTask.text,
-          projectId: projectId,
-          projectName: project ? project.title : "Unknown project",
-          timestamp: new Date().toISOString(),
-        });
+        
+        // Activity handled by backend
       })
       .addCase(createTask.rejected, (state, action) => {
         state.tasksLoading = false;
-        state.tasksError = action.payload;
+        state.tasksError = action.payload || "Failed to create task";
       })
 
-      // Update Task
-      .addCase(updateTask.pending, (state) => {
-        state.tasksLoading = true;
-        state.tasksError = null;
-      })
       .addCase(updateTask.fulfilled, (state, action) => {
-        state.tasksLoading = false;
         const updatedTask = convertTaskFormat(action.payload);
         const projectId = updatedTask.project;
-
+        
         if (state.todos[projectId]) {
-          const taskIndex = state.todos[projectId].findIndex(task => task.id === updatedTask.id);
+          const taskIndex = state.todos[projectId].findIndex(
+            (task) => task.id === updatedTask.id
+          );
           if (taskIndex !== -1) {
             state.todos[projectId][taskIndex] = updatedTask;
           }
         }
       })
-      .addCase(updateTask.rejected, (state, action) => {
-        state.tasksLoading = false;
-        state.tasksError = action.payload;
-      })
 
-      // Delete Task
-      .addCase(deleteTask.pending, (state) => {
-        state.tasksLoading = true;
-        state.tasksError = null;
-      })
       .addCase(deleteTask.fulfilled, (state, action) => {
-        state.tasksLoading = false;
         const { taskId, projectId } = action.payload;
-
+        
         if (state.todos[projectId]) {
-          const taskToDelete = state.todos[projectId].find(task => task.id === taskId);
-          state.todos[projectId] = state.todos[projectId].filter(task => task.id !== taskId);
-
-          if (taskToDelete) {
-            const project = state.todoBoxes.find((p) => p.id === projectId);
-            addActivity(state, {
-              id: Date.now(),
-              type: "task_deleted",
-              task: taskToDelete.text,
-              projectId: projectId,
-              projectName: project ? project.title : "Unknown project",
-              timestamp: new Date().toISOString(),
-            });
-          }
+          state.todos[projectId] = state.todos[projectId].filter(
+            (task) => task.id !== taskId
+          );
         }
       })
-      .addCase(deleteTask.rejected, (state, action) => {
-        state.tasksLoading = false;
-        state.tasksError = action.payload;
-      })
 
-      // Toggle Task Completion
-      .addCase(toggleTaskCompletion.pending, (state) => {
-        state.tasksLoading = true;
-        state.tasksError = null;
-      })
       .addCase(toggleTaskCompletion.fulfilled, (state, action) => {
-        state.tasksLoading = false;
         const { projectId, task } = action.payload;
         const updatedTask = convertTaskFormat(task);
-
+        
         if (state.todos[projectId]) {
-          const taskIndex = state.todos[projectId].findIndex(t => t.id === updatedTask.id);
+          const taskIndex = state.todos[projectId].findIndex(
+            (t) => t.id === updatedTask.id
+          );
           if (taskIndex !== -1) {
             state.todos[projectId][taskIndex] = updatedTask;
-
-            const project = state.todoBoxes.find((p) => p.id === projectId);
-            addActivity(state, {
-              id: Date.now(),
-              type: updatedTask.completed ? "task_completed" : "task_reopened",
-              task: updatedTask.text,
-              projectId: projectId,
-              projectName: project ? project.title : "Unknown project",
-              timestamp: new Date().toISOString(),
-            });
           }
         }
       })
-      .addCase(toggleTaskCompletion.rejected, (state, action) => {
-        state.tasksLoading = false;
-        state.tasksError = action.payload;
-      })
 
-      // Fetch Activity Feed
+      // ==================== ACTIVITY FEED ====================
       .addCase(fetchActivityFeed.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+        state.activityLoading = true;
+        state.activityError = null;
       })
       .addCase(fetchActivityFeed.fulfilled, (state, action) => {
-        state.loading = false;
-        state.activityFeed = action.payload.map(activity => ({
+        state.activityLoading = false;
+        
+        // Replace activity feed with fresh data from backend
+        state.activityFeed = action.payload.map((activity) => ({
           id: activity._id,
           type: activity.type,
           task: activity.task,
           projectId: activity.projectId,
           projectName: activity.projectName,
-          timestamp: activity.createdAt
-        }));
+          timestamp: activity.createdAt,
+        })).slice(0, 15); // Limit to 15 items
       })
       .addCase(fetchActivityFeed.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
+        state.activityLoading = false;
+        state.activityError = action.payload || "Failed to fetch activity feed";
       });
   },
 });
 
-const authInitialState = {
-  user: null,
+// ==================== AUTH SLICE ====================
+
+const authInitialState = { 
+  user: null, 
   token: null,
+  loading: false,
+  error: null
 };
 
 const authSlice = createSlice({
@@ -572,24 +563,47 @@ const authSlice = createSlice({
     setUser: (state, action) => {
       state.user = action.payload.user;
       state.token = action.payload.token;
+      state.error = null;
     },
     logout: (state) => {
       state.user = null;
       state.token = null;
+      state.error = null;
+    },
+    setAuthLoading: (state, action) => {
+      state.loading = action.payload;
+    },
+    setAuthError: (state, action) => {
+      state.error = action.payload;
+    },
+    clearAuthError: (state) => {
+      state.error = null;
     },
   },
 });
 
+// ==================== EXPORTS ====================
+
 export const todoReducer = todoSlice.reducer;
 export const authReducer = authSlice.reducer;
 
-export const { 
-  addTodo, 
-  toggleTodo, 
-  deleteTodo, 
-  addTodoBox, 
+// Todo actions
+export const {
+  addTodo,
+  toggleTodo,
+  deleteTodo,
+  addTodoBox,
   deleteTodoBox,
-  clearError 
+  clearError,
+  clearActivityFeed,
+  resetTodoState,
 } = todoSlice.actions;
 
-export const { setUser, logout } = authSlice.actions;
+// Auth actions
+export const { 
+  setUser, 
+  logout,
+  setAuthLoading,
+  setAuthError,
+  clearAuthError
+} = authSlice.actions;

@@ -74,10 +74,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
     }
 
     // Check if user has access to this task's project
-    const hasAccess = task.project.owner.toString() === req.user._id.toString() ||
-      task.project.collaborators.some(collab => 
-        collab.user.toString() === req.user._id.toString()
-      );
+const hasAccess = task.project.owner.toString() === req.user._id.toString();
+
 
     if (!hasAccess) {
       return res.status(403).json({
@@ -120,14 +118,11 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
-    // Check if user has access to this project
-    const project = await Project.findOne({
-      _id: projectId,
-      $or: [
-        { owner: req.user._id },
-        { 'collaborators.user': req.user._id }
-      ]
-    });
+const project = await Project.findOne({
+  _id: projectId,
+  owner: req.user._id
+});
+
 
     if (!project) {
       return res.status(404).json({
@@ -210,10 +205,8 @@ router.put('/:id', authenticateToken, async (req, res) => {
     }
 
     // Check if user has access to this task's project
-    const hasAccess = task.project.owner.toString() === req.user._id.toString() ||
-      task.project.collaborators.some(collab => 
-        collab.user.toString() === req.user._id.toString()
-      );
+const hasAccess = task.project.owner.toString() === req.user._id.toString();
+
 
     if (!hasAccess) {
       return res.status(403).json({
@@ -284,10 +277,8 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     }
 
     // Check if user has access to this task's project
-    const hasAccess = task.project.owner.toString() === req.user._id.toString() ||
-      task.project.collaborators.some(collab => 
-        collab.user.toString() === req.user._id.toString()
-      );
+const hasAccess = task.project.owner.toString() === req.user._id.toString();
+
 
     if (!hasAccess) {
       return res.status(403).json({
@@ -344,10 +335,8 @@ router.patch('/:id/toggle', authenticateToken, async (req, res) => {
     }
 
     // Check if user has access to this task's project
-    const hasAccess = task.project.owner.toString() === req.user._id.toString() ||
-      task.project.collaborators.some(collab => 
-        collab.user.toString() === req.user._id.toString()
-      );
+const hasAccess = task.project.owner.toString() === req.user._id.toString();
+
 
     if (!hasAccess) {
       return res.status(403).json({
