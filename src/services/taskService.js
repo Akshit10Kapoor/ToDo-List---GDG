@@ -1,7 +1,7 @@
 // src/services/taskService.js
 const API_BASE_URL = window.location.hostname === 'localhost' 
   ? 'http://localhost:5000/api' 
-  : 'http://localhost:5000/api';
+  : 'https://todo-list-gdg-backend.onrender.com';
 
 class TaskService {
   // Get auth token from storage (matching AuthService format)
