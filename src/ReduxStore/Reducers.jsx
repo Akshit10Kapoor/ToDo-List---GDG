@@ -137,15 +137,15 @@ const todoInitialState = {
   // Project data
   todoBoxes: [],
   todos: {},
-  
+
   // Activity feed - limited size
   activityFeed: [],
-  
+
   // Loading states
   loading: false,
   tasksLoading: false,
   activityLoading: false,
-  
+
   // Error states
   error: null,
   tasksError: null,
@@ -157,13 +157,13 @@ const todoInitialState = {
 const addActivity = (state, activity) => {
   // Only add if it's not a duplicate
   const isDuplicate = state.activityFeed.some(
-    (item) => 
-      item.type === activity.type && 
-      item.task === activity.task && 
+    (item) =>
+      item.type === activity.type &&
+      item.task === activity.task &&
       item.projectId === activity.projectId &&
       Math.abs(new Date(item.timestamp) - new Date(activity.timestamp)) < 1000
   );
-  
+
   if (!isDuplicate) {
     state.activityFeed.unshift(activity);
     // Keep only last 15 activities
@@ -224,11 +224,11 @@ const todoSlice = createSlice({
       const { boxId, text } = action.payload;
       if (!state.todos[boxId]) state.todos[boxId] = [];
 
-      const newTask = { 
+      const newTask = {
         id: `temp_${Date.now()}`, // Temporary ID for local tasks
-        text, 
+        text,
         completed: false,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       };
       state.todos[boxId].push(newTask);
 
@@ -249,7 +249,7 @@ const todoSlice = createSlice({
         state.todos[boxId] = state.todos[boxId].map((todo) => {
           if (todo.id === todoId) {
             const updated = { ...todo, completed: !todo.completed };
-            
+
             // Only add activity for local toggles
             addActivity(state, {
               id: `activity_${Date.now()}`,
@@ -273,7 +273,7 @@ const todoSlice = createSlice({
         state.todos[boxId] = state.todos[boxId].filter(
           (todo) => todo.id !== todoId
         );
-        
+
         if (taskToDelete) {
           addActivity(state, {
             id: `activity_${Date.now()}`,
@@ -291,13 +291,13 @@ const todoSlice = createSlice({
       const newBoxId = `temp_${Date.now()}`;
       const colors = [
         "bg-green-100",
-        "bg-yellow-100", 
+        "bg-yellow-100",
         "bg-red-100",
         "bg-blue-100",
         "bg-purple-100",
         "bg-pink-100",
       ];
-      
+
       const newProject = {
         id: newBoxId,
         title: action.payload?.title || "Todo List",
@@ -305,7 +305,7 @@ const todoSlice = createSlice({
         color: colors[state.todoBoxes.length % colors.length],
         createdAt: new Date().toISOString(),
       };
-      
+
       state.todoBoxes.push(newProject);
       state.todos[newBoxId] = [];
 
@@ -324,7 +324,7 @@ const todoSlice = createSlice({
       const projectToDelete = state.todoBoxes.find((box) => box.id === boxId);
       state.todoBoxes = state.todoBoxes.filter((box) => box.id !== boxId);
       delete state.todos[boxId];
-      
+
       if (projectToDelete) {
         addActivity(state, {
           id: `activity_${Date.now()}`,
@@ -363,7 +363,7 @@ const todoSlice = createSlice({
       })
       .addCase(fetchProjects.fulfilled, (state, action) => {
         state.loading = false;
-        
+
         // Sort by createdAt (oldest first)
         const sortedProjects = [...action.payload].sort(
           (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
@@ -380,9 +380,12 @@ const todoSlice = createSlice({
         });
 
         // Clean up todos for deleted projects
-        const currentProjectIds = sortedProjects.map(p => p._id);
-        Object.keys(state.todos).forEach(projectId => {
-          if (!currentProjectIds.includes(projectId) && !projectId.startsWith('temp_')) {
+        const currentProjectIds = sortedProjects.map((p) => p._id);
+        Object.keys(state.todos).forEach((projectId) => {
+          if (
+            !currentProjectIds.includes(projectId) &&
+            !projectId.startsWith("temp_")
+          ) {
             delete state.todos[projectId];
           }
         });
@@ -403,7 +406,7 @@ const todoSlice = createSlice({
         const insertIndex = state.todoBoxes.findIndex(
           (p) => new Date(p.createdAt) > new Date(newProject.createdAt)
         );
-        
+
         if (insertIndex === -1) {
           state.todoBoxes.push(newProject);
         } else {
@@ -411,7 +414,7 @@ const todoSlice = createSlice({
         }
 
         state.todos[newProject.id] = [];
-        
+
         // Activity is handled by the backend, don't add local activity
       })
       .addCase(createProject.rejected, (state, action) => {
@@ -425,10 +428,10 @@ const todoSlice = createSlice({
       .addCase(deleteProjectAsync.fulfilled, (state, action) => {
         state.loading = false;
         const projectId = action.payload;
-        
+
         state.todoBoxes = state.todoBoxes.filter((box) => box.id !== projectId);
         delete state.todos[projectId];
-        
+
         // Activity is handled by the backend
       })
       .addCase(deleteProjectAsync.rejected, (state, action) => {
@@ -454,7 +457,7 @@ const todoSlice = createSlice({
       .addCase(fetchProjectTasks.fulfilled, (state, action) => {
         state.tasksLoading = false;
         const { projectId, tasks } = action.payload;
-        
+
         // Only update if we actually got tasks from the API
         if (Array.isArray(tasks)) {
           state.todos[projectId] = tasks.map(convertTaskFormat);
@@ -471,13 +474,20 @@ const todoSlice = createSlice({
       .addCase(createTask.fulfilled, (state, action) => {
         state.tasksLoading = false;
         const { projectId, task } = action.payload;
-        
+
         if (!state.todos[projectId]) state.todos[projectId] = [];
-        
+
         const convertedTask = convertTaskFormat(task);
         state.todos[projectId].push(convertedTask);
-        
-        // Activity handled by backend
+
+        addActivity(state, {
+          id: `activity_${Date.now()}`,
+          type: "task_created",
+          task: convertedTask.title,
+          projectId,
+          projectName: getProjectTitle(state, projectId),
+          timestamp: new Date().toISOString(),
+        });
       })
       .addCase(createTask.rejected, (state, action) => {
         state.tasksLoading = false;
@@ -487,7 +497,7 @@ const todoSlice = createSlice({
       .addCase(updateTask.fulfilled, (state, action) => {
         const updatedTask = convertTaskFormat(action.payload);
         const projectId = updatedTask.project;
-        
+
         if (state.todos[projectId]) {
           const taskIndex = state.todos[projectId].findIndex(
             (task) => task.id === updatedTask.id
@@ -500,7 +510,7 @@ const todoSlice = createSlice({
 
       .addCase(deleteTask.fulfilled, (state, action) => {
         const { taskId, projectId } = action.payload;
-        
+
         if (state.todos[projectId]) {
           state.todos[projectId] = state.todos[projectId].filter(
             (task) => task.id !== taskId
@@ -511,7 +521,7 @@ const todoSlice = createSlice({
       .addCase(toggleTaskCompletion.fulfilled, (state, action) => {
         const { projectId, task } = action.payload;
         const updatedTask = convertTaskFormat(task);
-        
+
         if (state.todos[projectId]) {
           const taskIndex = state.todos[projectId].findIndex(
             (t) => t.id === updatedTask.id
@@ -529,16 +539,18 @@ const todoSlice = createSlice({
       })
       .addCase(fetchActivityFeed.fulfilled, (state, action) => {
         state.activityLoading = false;
-        
+
         // Replace activity feed with fresh data from backend
-        state.activityFeed = action.payload.map((activity) => ({
-          id: activity._id,
-          type: activity.type,
-          task: activity.task,
-          projectId: activity.projectId,
-          projectName: activity.projectName,
-          timestamp: activity.createdAt,
-        })).slice(0, 15); // Limit to 15 items
+        state.activityFeed = action.payload
+          .map((activity) => ({
+            id: activity._id,
+            type: activity.type,
+            task: activity.task,
+            projectId: activity.projectId,
+            projectName: activity.projectName,
+            timestamp: activity.createdAt,
+          }))
+          .slice(0, 15); // Limit to 15 items
       })
       .addCase(fetchActivityFeed.rejected, (state, action) => {
         state.activityLoading = false;
@@ -549,11 +561,11 @@ const todoSlice = createSlice({
 
 // ==================== AUTH SLICE ====================
 
-const authInitialState = { 
-  user: null, 
+const authInitialState = {
+  user: null,
   token: null,
   loading: false,
-  error: null
+  error: null,
 };
 
 const authSlice = createSlice({
@@ -600,10 +612,5 @@ export const {
 } = todoSlice.actions;
 
 // Auth actions
-export const { 
-  setUser, 
-  logout,
-  setAuthLoading,
-  setAuthError,
-  clearAuthError
-} = authSlice.actions;
+export const { setUser, logout, setAuthLoading, setAuthError, clearAuthError } =
+  authSlice.actions;

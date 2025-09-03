@@ -47,6 +47,13 @@ const ProjectDashboard = () => {
     return saved ? saved : 'grid';
   });
 
+  // Add sort mode state
+  const [sortMode, setSortMode] = useState(() => {
+    // Initialize from localStorage or default to 'created'
+    const saved = localStorage.getItem('sortMode');
+    return saved ? saved : 'created';
+  });
+
   // Save dark mode preference to localStorage
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
@@ -57,6 +64,11 @@ const ProjectDashboard = () => {
     localStorage.setItem('viewMode', viewMode);
   }, [viewMode]);
 
+  // Save sort mode preference to localStorage
+  useEffect(() => {
+    localStorage.setItem('sortMode', sortMode);
+  }, [sortMode]);
+
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode);
   };
@@ -64,6 +76,11 @@ const ProjectDashboard = () => {
   // Toggle view mode function
   const toggleViewMode = (mode) => {
     setViewMode(mode);
+  };
+
+  // Handle sort change
+  const handleSortChange = (e) => {
+    setSortMode(e.target.value);
   };
 
   const createNewTodoBox = () => {
@@ -118,6 +135,27 @@ const ProjectDashboard = () => {
     }
   };
 
+  // Sort projects based on selected mode
+  const getSortedProjects = () => {
+    const projectsWithTaskCount = todoBoxes.map(project => ({
+      ...project,
+      taskCount: todos[project.id] ? todos[project.id].length : 0
+    }));
+
+    switch (sortMode) {
+      case 'tasks-desc':
+        return projectsWithTaskCount.sort((a, b) => b.taskCount - a.taskCount);
+      case 'tasks-asc':
+        return projectsWithTaskCount.sort((a, b) => a.taskCount - b.taskCount);
+      case 'created-desc':
+        return projectsWithTaskCount.sort((a, b) => new Date(b.createdAt || b.timestamp) - new Date(a.createdAt || a.timestamp));
+      case 'created-asc':
+        return projectsWithTaskCount.sort((a, b) => new Date(a.createdAt || a.timestamp) - new Date(b.createdAt || b.timestamp));
+      default:
+        return projectsWithTaskCount.sort((a, b) => new Date(b.createdAt || b.timestamp) - new Date(a.createdAt || a.timestamp));
+    }
+  };
+
   // Load projects and activity feed on mount
   useEffect(() => {
     if (authData) {
@@ -143,6 +181,8 @@ const ProjectDashboard = () => {
       dispatch(clearError());
     };
   }, [dispatch]);
+
+  const sortedProjects = getSortedProjects();
 
   return (
     <div className={`min-h-screen flex transition-all duration-500 ease-in-out ${
@@ -251,41 +291,23 @@ const ProjectDashboard = () => {
             </div>
           </div>
 
-          <div className="flex space-x-3">
-            <select className={`px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-300 ${
-              isDarkMode 
-                ? 'bg-gray-800 text-gray-200 border-gray-600' 
-                : 'bg-white text-gray-900'
-            }`}>
-              <option>All Clients</option>
-            </select>
-            <select className={`px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-300 ${
-              isDarkMode 
-                ? 'bg-gray-800 text-gray-200 border-gray-600' 
-                : 'bg-white text-gray-900'
-            }`}>
-              <option>Filter 1</option>
-            </select>
-            <select className={`px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-300 ${
-              isDarkMode 
-                ? 'bg-gray-800 text-gray-200 border-gray-600' 
-                : 'bg-white text-gray-900'
-            }`}>
-              <option>Filter 2</option>
-            </select>
-            <select className={`px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-300 ${
-              isDarkMode 
-                ? 'bg-gray-800 text-gray-200 border-gray-600' 
-                : 'bg-white text-gray-900'
-            }`}>
-              <option>Filter 3</option>
-            </select>
-            <select className={`px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-300 ${
-              isDarkMode 
-                ? 'bg-gray-800 text-gray-200 border-gray-600' 
-                : 'bg-white text-gray-900'
-            }`}>
-              <option>Filter 4</option>
+          {/* Sort Dropdown */}
+          <div className="flex space-x-3 ">
+            <select 
+              value={sortMode}
+              onChange={handleSortChange}
+              className={`px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 rounded sfocus:ring-blue-500 transition-colors duration-300 ${
+                isDarkMode 
+                  ? 'bg-gray-800 text-gray-200 border-gray-600' 
+                  : 'bg-white text-gray-900'
+              }`}
+            >
+              <optgroup label="Sort by">
+                <option value="created-desc">Newest First</option>
+                <option value="created-asc">Oldest First</option>
+                <option value="tasks-desc">Most Tasks</option>
+                <option value="tasks-asc">Least Tasks</option>
+              </optgroup>
             </select>
           </div>
         </div>
@@ -354,7 +376,7 @@ const ProjectDashboard = () => {
         {!loading && todoBoxes.length > 0 && (
           <div className="transition-all duration-500 ease-in-out">
             <ProjectCard 
-              projects={todoBoxes} 
+              projects={sortedProjects} 
               onDelete={handleDeleteProject}
               isDarkMode={isDarkMode}
               viewMode={viewMode}

@@ -10,15 +10,13 @@ import {
 } from "lucide-react";
 import AuthModal from "../Modals/SignupAndLoginModal.jsx";
 
-
 const TaskFlowLanding = () => {
   const [isMounted, setIsMounted] = useState(false);
   const [featureIdx, setFeatureIdx] = useState(0);
- const [authType, setAuthType] = useState(null); 
+  const [authType, setAuthType] = useState(null);
 
-const openAuthModal = (type) => setAuthType(type);
-const closeAuthModal = () => setAuthType(null);
-
+  const openAuthModal = (type) => setAuthType(type);
+  const closeAuthModal = () => setAuthType(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -87,7 +85,7 @@ const closeAuthModal = () => setAuthType(null);
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 shadow-sm">
             <CheckCircle2 className="h-5 w-5 text-gray-700" />
           </div>
-          <span className="text-xl font-bold text-gray-900">TaskFlow</span>
+          <span className="text-xl font-bold text-gray-900">TaskOverflow</span>
         </div>
         <div className="hidden items-center gap-6 md:flex">
           <a
@@ -96,13 +94,13 @@ const closeAuthModal = () => setAuthType(null);
           >
             Features
           </a>
-          
-<button
-  onClick={() => openAuthModal("signin")}
-  className="rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm transition hover:bg-blue-100"
->
-  Sign in
-</button>
+
+          <button
+            onClick={() => openAuthModal("signin")}
+            className="rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm transition hover:bg-blue-100"
+          >
+            Sign in
+          </button>
         </div>
       </motion.nav>
 
@@ -130,27 +128,19 @@ const closeAuthModal = () => setAuthType(null);
               clutter, and just enough data to keep momentum.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
-<a
-  onClick={() => openAuthModal("signup")}
-  className="group inline-flex items-center justify-center rounded-xl border border-green-200 bg-white px-6 py-3 text-base font-semibold text-gray-900 shadow-sm transition hover:bg-green-100 cursor-pointer"
->
-  Get started
-  <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-0.5" />
-</a>
+              <a
+                onClick={() => openAuthModal("signup")}
+                className="group inline-flex items-center justify-center rounded-xl border border-green-200 bg-white px-6 py-3 text-base font-semibold text-gray-900 shadow-sm transition hover:bg-green-100 cursor-pointer"
+              >
+                Get started
+                <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-0.5" />
+              </a>
               <a
                 href="#features"
                 className="inline-flex items-center justify-center rounded-xl border border-purple-200 bg-white px-6 py-3 text-base font-semibold text-gray-900 shadow-sm transition hover:bg-purple-100"
               >
                 Explore features
               </a>
-            </div>
-            <div className="flex items-center gap-3 pt-2">
-              <div className="h-8 w-8 rounded-lg bg-pink-100" />
-              <div className="h-8 w-8 rounded-lg bg-yellow-100" />
-              <div className="h-8 w-8 rounded-lg bg-red-100" />
-              <span className="text-sm text-gray-600">
-                Pastel-first, distraction-free UI
-              </span>
             </div>
           </motion.div>
 
@@ -303,12 +293,11 @@ const closeAuthModal = () => setAuthType(null);
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <a
-                  onClick={() => openAuthModal("signin")}
+                onClick={() => openAuthModal("signin")}
                 className="inline-flex items-center justify-center rounded-xl border border-blue-200 bg-white px-6 py-3 font-semibold text-gray-900 shadow-sm transition hover:bg-blue-100 cursor-pointer"
               >
                 Sign in
               </a>
-              
             </div>
           </div>
         </div>
