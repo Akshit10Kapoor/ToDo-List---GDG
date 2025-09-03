@@ -8,14 +8,17 @@ import {
   BarChart3,
   Play,
 } from "lucide-react";
+import AuthModal from "../Modals/SignupAndLoginModal.jsx";
 
-// Pastel-first landing that matches your Todo page vibe (blurred blobs, cards, subtle motion)
-// Color palette restricted to *-100 / *-200 intensities per your request.
-// Hook up the primary CTA (onClick / href) to your auth flow; navigate to the main Todo page after login.
 
 const TaskFlowLanding = () => {
   const [isMounted, setIsMounted] = useState(false);
   const [featureIdx, setFeatureIdx] = useState(0);
+ const [authType, setAuthType] = useState(null); 
+
+const openAuthModal = (type) => setAuthType(type);
+const closeAuthModal = () => setAuthType(null);
+
 
   useEffect(() => {
     setIsMounted(true);
@@ -94,9 +97,12 @@ const TaskFlowLanding = () => {
             Features
           </a>
           
-          <button className="rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm transition hover:bg-blue-100">
-            Sign in
-          </button>
+<button
+  onClick={() => openAuthModal("signin")}
+  className="rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm transition hover:bg-blue-100"
+>
+  Sign in
+</button>
         </div>
       </motion.nav>
 
@@ -124,13 +130,13 @@ const TaskFlowLanding = () => {
               clutter, and just enough data to keep momentum.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <a
-                href="#login" // Hook to your auth route
-                className="group inline-flex items-center justify-center rounded-xl border border-green-200 bg-white px-6 py-3 text-base font-semibold text-gray-900 shadow-sm transition hover:bg-green-100"
-              >
-                Get started
-                <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-0.5" />
-              </a>
+<a
+  onClick={() => openAuthModal("signup")}
+  className="group inline-flex items-center justify-center rounded-xl border border-green-200 bg-white px-6 py-3 text-base font-semibold text-gray-900 shadow-sm transition hover:bg-green-100 cursor-pointer"
+>
+  Get started
+  <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-0.5" />
+</a>
               <a
                 href="#features"
                 className="inline-flex items-center justify-center rounded-xl border border-purple-200 bg-white px-6 py-3 text-base font-semibold text-gray-900 shadow-sm transition hover:bg-purple-100"
@@ -297,8 +303,8 @@ const TaskFlowLanding = () => {
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <a
-                href="#login"
-                className="inline-flex items-center justify-center rounded-xl border border-blue-200 bg-white px-6 py-3 font-semibold text-gray-900 shadow-sm transition hover:bg-blue-100"
+                  onClick={() => openAuthModal("signin")}
+                className="inline-flex items-center justify-center rounded-xl border border-blue-200 bg-white px-6 py-3 font-semibold text-gray-900 shadow-sm transition hover:bg-blue-100 cursor-pointer"
               >
                 Sign in
               </a>
@@ -319,6 +325,7 @@ const TaskFlowLanding = () => {
           ↑
         </motion.span>
       </div>
+      <AuthModal isOpen={!!authType} onClose={closeAuthModal} type={authType} />
     </div>
   );
 };
